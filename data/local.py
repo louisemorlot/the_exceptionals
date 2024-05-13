@@ -15,8 +15,8 @@ class CellDataset(Dataset):
     """A Pytorch dataset to load the images and masks"""
 
     def __init__(self, img_dir, mask_dir, transform = None, img_transform = None):
-        self.img_dir = ("/louise.morlot/course/project_dl4mia/devel/" + img_dir)
-        self.mask_dir = ("/louise.morlot/course/project_dl4mia/devel/" + mask_dir)
+        self.img_dir = img_dir
+        self.mask_dir = mask_dir
         self.images = os.listdir(self.img_dir)
         self.masks = os.listdir(self.mask_dir)
 
