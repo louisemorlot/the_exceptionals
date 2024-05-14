@@ -50,7 +50,7 @@ class CellDataset(Dataset):
             )
             mask = Image.open(mask_path)
             mask.load()
-            self.loaded_masks[img_ind] = transforms.ToTensor()(mask)
+            self.loaded_masks[mask_ind] = transforms.ToTensor()(mask)
 
     # get the total number of samples
     def __len__(self):
