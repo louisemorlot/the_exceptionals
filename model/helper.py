@@ -247,3 +247,61 @@ def evaluate(gt_labels: np.ndarray, pred_labels: np.ndarray, th: float = 0.5):
     accuracy = tp / (tp + fp + fn)
 
     return precision, recall, accuracy
+
+def validate(
+    model, 
+    loader, 
+    loss_function, 
+    metric,
+    step = None, 
+    tb_logger = None, 
+    device = None,
+    ):
+
+    if device is None:
+        # default to gpu if available
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+        else:
+            device = torch.device("cpu")
+
+    # set model to eval mode for validation
+    model.eval()
+    model.to(device)
+
+    # set validation loss and metrix
+    val_loss = 0
+    val_metric = 0
+
+    with torch.no_grad():
+        for x, y in loader:
+            x, y = x.to(device), y.to(device)
+
+            pred = model(x)
+            # set target type same as prediction type. If "RunTimeError: found dType Float but expected
+            # Short" message, look here.  
+            if y.dtype != pred.dtype:
+                y = y.type(pred.dtype)
+            val_loss += loss_function(pred, y).item()
+            val_metric += metric(pred > 0.5, y).item()
+
+    val_loss = val_loss / len(loader)
+    val_metric = val_metric / len(loader)
+
+    if tb_logger is not None:
+        assert(
+            step is not None
+        ), "Need to know the current step to show validation results"
+
+        tb_logger.add_scalar(tag = "val_loss", scalar_value = val_loss, global_step=step)
+        tb_logger.add_scalar(tag = "val_metric", scalar_value = val_metric, global_step = step)
+
+        tb_logger.add_images(tag = "val input image", img_tensor = x.to("cpu"), global_step = step)
+        tb_logger.add_images(tag = "val target image", img_tensor = y.to("cpu"), global_step = step)
+        tb_logger.add_images(tag = "val prediction", img_tensor = pred.to("cpu"), global_step = step)
+
+    print(
+        "\nValidate: Average loss: {:.4f}, Average Metric: {:.4f}\n".format(
+            val_loss, val_metric
+        )
+    )
