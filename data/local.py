@@ -19,6 +19,7 @@ class CellDataset(Dataset):
         self.mask_dir = mask_dir
         self.images = os.listdir(self.img_dir)
         self.masks = os.listdir(self.mask_dir)
+        self.transform = transform
 
         self.img_transform = img_transform
 
@@ -26,30 +27,30 @@ class CellDataset(Dataset):
             [
                 transforms.Grayscale(),
                 transforms.ToTensor(),
-                transforms.Normalize([self.mean],[self.std]),
+                transforms.Normalize([0.5],[0.5]),
             ]
         )
 
         self.loaded_imgs = [None] * len(self.images)
-        self.loaded_masks = [None] * len(self.mask)
+        self.loaded_masks = [None] * len(self.masks)
 
         for img_ind in range(len(self.images)):
             img_path = os.path.join(
-                self.img_dir, self.images[img_ind], ".tif"
+                self.img_dir, self.images[img_ind]
             )
             image = Image.open(img_path)
             image.load()
-            self.mean = image.mean()
-            self.std = image.std()
-            self.loaded_imgs[sample_ind] = inp_transforms(image)
+            #self.mean = image.mean()
+            #self.std = image.std()
+            self.loaded_imgs[img_ind] = inp_transforms(image)
 
         for mask_ind in range(len(self.masks)):
             mask_path = os.path.join(
-                self.mask_dir, self.masks[mask_ind], ".tif"
+                self.mask_dir, self.masks[mask_ind]
             )
             mask = Image.open(mask_path)
             mask.load()
-            self.loaded_masks[sample_ind] = transforms.ToTensor()(mask)
+            self.loaded_masks[img_ind] = transforms.ToTensor()(mask)
 
     # get the total number of samples
     def __len__(self):
