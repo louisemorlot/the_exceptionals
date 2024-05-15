@@ -63,14 +63,13 @@ def show_random_sampler_image(sampleData):
 
 class Sampler():
 
-    def __init__(self, trainData):
-        self.trainData = trainData
-        self.loaded_imgs = trainData.loaded_imgs
-        self.loaded_masks = trainData.loaded_masks
+    def __init__(self, image, mask):
+        self.image = image
+        self.mask = mask
 
     # get the total number of samples
     def __len__(self):
-        return len(self.trainData.images)
+        return len(self.image)
         
     #def estimate_source_distribution(img_dir, mask_dir, transform = transforms_v2.RandomCrop(256)):
         #draw random distribution using CellDataset(img_dir = img_dir, mask_dir = mask_dir, transform = transforms_v2.RandomCrop(256)                           )
@@ -80,33 +79,21 @@ class Sampler():
         # Sample training images to match the desired distribution from to min and max of the source distribution
 
         # Random draw, check target distribution 
+        indexh, indexw = sampling_pdf(self.mask, croping_weight, patch_size[0], patch_size[1])
+        lr = indexh - np.floor(patch_size[0] // 2)
+        lr = lr.astype(np.int16)
+        ur = indexh + np.round(patch_size[0] // 2)
+        ur = ur.astype(np.int16)
 
-        self.loaded_input_patches = [None] * len(self.loaded_imgs)
-        self.loaded_masks_patches = [None] * len(self.loaded_masks)
+        lc = indexw - np.floor(patch_size[1] // 2)
+        lc = lc.astype(np.int16)
+        uc = indexw + np.round(patch_size[1] // 2)
+        uc = uc.astype(np.int16)
 
-        for i in range(len(self.trainData.loaded_imgs)):
-            image = self.trainData.loaded_imgs[i]
-            image = image.cpu().numpy()
-            image = np.squeeze(image)
-            mask = self.trainData.loaded_masks[i]
-            mask = mask.cpu().numpy()
-            mask = np.squeeze(mask)
-            indexh, indexw = sampling_pdf(mask, croping_weight, patch_size[0], patch_size[1])
-            lr = indexh - np.floor(patch_size[0] // 2)
-            lr = lr.astype(np.int16)
-            ur = indexh + np.round(patch_size[0] // 2)
-            ur = ur.astype(np.int16)
-
-            lc = indexw - np.floor(patch_size[1] // 2)
-            lc = lc.astype(np.int16)
-            uc = indexw + np.round(patch_size[1] // 2)
-            uc = uc.astype(np.int16)
-
-            mask_patch = mask[lr:ur, lc:uc]
-            image_patch = image[lr:ur, lc:uc]     
-            #mask_patch = np.expand_dims(mask_patch, axis=0)
-            #image_patch = np.expand_dims(image_patch, axis=0)
-            self.loaded_masks_patches[i] = transforms.ToTensor()(mask_patch)
-            self.loaded_input_patches[i] = transforms.ToTensor()(image_patch)
-
-        return
+        mask_patch = self.mask[lr:ur, lc:uc]
+        image_patch = self.image[lr:ur, lc:uc]
+        #mask_patch = np.expand_dims(mask_patch, axis=0)
+        #image_patch = np.expand_dims(image_patch, axis=0)
+        #self.loaded_masks_patches[i] = transforms.ToTensor()(mask_patch)
+        #self.loaded_input_patches[i] = transforms.ToTensor()(image_patch)
+        return image_patch, mask_patch
