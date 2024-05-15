@@ -29,12 +29,16 @@ class CellDataset(Dataset):
         self.images = os.listdir(self.img_dir)
         self.masks = os.listdir(self.mask_dir)
 
-        transform_list = []
-        transform_list += [transforms.Grayscale()]
-        transform_list += [transforms.ToTensor()]
-        transform_list += [Global_normalize()]
+        transform_img_list = []
+        transform_img_list += [transforms.Grayscale()]
+        transform_img_list += [transforms.ToTensor()] # already scales the image to [0,1]
+
+        transform_mask_list = []
+
+        # transform_list += [Global_normalize()]
         # transform_list += [transforms.Lambda(lambda  img: self.__normalize(img))]
-        self.transform_a = transforms.Compose(transform_list)
+        self.img_transform = transforms.Compose(transform_img_list)
+        self.mask_transform = transforms.Compose(transform_mask_list)
 
         # self.loaded_imgs = [None] * len(self.images)
         # self.loaded_masks = [None] * len(self.masks)
@@ -75,9 +79,9 @@ class CellDataset(Dataset):
         # the image and mask
         seed = torch.seed()
         torch.manual_seed(seed)
-        image = self.transform_a(image)
+        image = self.img_transform(image)
         torch.manual_seed(seed)
-        mask = self.transform_a(mask)
+        mask = self.mask_transform(mask)
         # if self.img_transform is not None:
         #     image = self.img_transform(image)
         return image, mask
