@@ -14,7 +14,6 @@ from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 import torchvision.transforms.v2 as transforms_v2
 
-
 import sys
 import os
 
@@ -73,10 +72,12 @@ def run_training(
     epoch,
     log_interval=100,
     log_image_interval=20,
-    tb_logger=None,
     device=None,
     early_stop=False,
 ):
+
+    tb_logger = SummaryWriter("/localscratch/runs/Unet")
+    
     if device is None:
         # You can pass in a device or we will default to using
         # the gpu. Feel free to try training on the cpu to see
@@ -112,6 +113,10 @@ def run_training(
         loss.backward()
         optimizer.step()
 
+                 
+        # log to tensorboard
+        step = epoch * len(loader) + batch_id
+        
         # log to console
         if batch_id % log_interval == 0:
             print(
@@ -123,26 +128,23 @@ def run_training(
                     loss.item(),
                 )
             )
-
-        # log to tensorboard
-        if tb_logger is not None:
-            step = epoch * len(loader) + batch_id
             tb_logger.add_scalar(
                 tag="train_loss", scalar_value=loss.item(), global_step=step
             )
-            # check if we log images in this iteration
-            if step % log_image_interval == 0:
-                tb_logger.add_images(
-                    tag="input", img_tensor=x.to("cpu"), global_step=step
-                )
-                tb_logger.add_images(
-                    tag="target", img_tensor=y.to("cpu"), global_step=step
-                )
-                tb_logger.add_images(
-                    tag="prediction",
-                    img_tensor=prediction.to("cpu").detach(),
-                    global_step=step,
-                )
+            
+        # check if we log images in this iteration
+        if step % log_image_interval == 0:
+            tb_logger.add_images(
+                tag="input", img_tensor=x.to("cpu"), global_step=step
+            )
+            tb_logger.add_images(
+                tag="target", img_tensor=y.to("cpu"), global_step=step
+            )
+            tb_logger.add_images(
+                tag="prediction",
+                img_tensor=prediction.to("cpu").detach(),
+                global_step=step,
+            )
 
         if early_stop and batch_id > 5:
             print("Stopping test early!")

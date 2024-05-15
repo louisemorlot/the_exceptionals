@@ -9,9 +9,8 @@ from torchvision import transforms
 from torchvision.transforms import functional as F
 
 from skimage import io
-
-sys.path.append("/localscratch/devel/the_exceptionals/data/")
-import local
+import sys
+sys.path.append("/localscratch/project/the_exceptionals/data/")
 from transformation import sample_crops
 
 def show_one_image(image_path):
@@ -19,7 +18,7 @@ def show_one_image(image_path):
     plt.imshow(image)
 
 class NumpyToTensor:
-    def __call__(self, ndarray: image):
+    def __call__(self, image):
         img_tensor = torch.from_numpy(image).float()
         return img_tensor
         
@@ -28,12 +27,14 @@ class ImageNormalize:
         image = image.astype(np.float32)
         image = np.array(image)
         image = image / ((2**16-1)*1.0)
+        image = np.expand_dims(image, axis = 0)
         return image        
     
 class MaskNormalize:
     def __call__(self, mask):
-        mask = image.astype(np.float32)
+        mask = mask.astype(np.float32)
         mask = np.array(mask)
+        mask = np.expand_dims(mask, axis = 0)
         return mask
     
 class CellDataset(Dataset):
@@ -58,7 +59,7 @@ class CellDataset(Dataset):
         self.img_transform = transforms.Compose(transform_img_list)
         self.mask_transform = transforms.Compose(transform_mask_list)
 
-        print (f"number of images: {len(self.images)}")
+        #print (f"number of images: {len(self.images)}")
 
     # get the total number of samples
     def __len__(self):
@@ -72,15 +73,15 @@ class CellDataset(Dataset):
         # mask = Image.open(os.path.join(self.mask_dir, self.masks[idx%(len(self.masks))]))
         image = io.imread(os.path.join(self.img_dir, self.images[idx%(len(self.images))]))
         mask = io.imread(os.path.join(self.mask_dir, self.masks[idx%(len(self.masks))]))
-        print (f"image_shape: {image.shape}")
-        print (f"mask_shape: {mask.shape}")
+        #print (f"image_shape: {image.shape}")
+        #print (f"mask_shape: {mask.shape}")
 
         # Calculate crop coordinates from mask
         cropCoords = sample_crops(mask)
 
         # Apply crop to image and mask
-        image = image[cropCoords]
-        mask = mask[cropCoords]
+        image = image[cropCoords[0]:cropCoords[1],cropCoords[2]:cropCoords[3]]
+        mask = mask[cropCoords[0]:cropCoords[1],cropCoords[2]:cropCoords[3]]
         
         # Note: using seeds to ensure the same random transform is applied to
         # the image and mask
