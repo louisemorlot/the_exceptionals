@@ -11,54 +11,52 @@ def show_one_image(image_path):
     image = imageio.imread(image_path)
     plt.imshow(image)
 
-class Global_normalize(torch.nn.Module):
+# class Global_normalize(torch.nn.Module):
 
-    def __init__():
-        super().__init__()
+#     def __init__():
+#         super().__init__()
 
-    def forward(self, img):
-        img_normd = img / ((2**16-1)*1.0)
-        return img_normd 
+#     def forward(self, img):
+#         img_normd = img / ((2**16-1)*1.0)
+#         return img_normd 
 
 class CellDataset(Dataset):
     """A Pytorch dataset to load the images and masks"""
 
-    def __init__(self, img_dir, mask_dir, transform = None, img_transform = None):
+    def __init__(self, img_dir, mask_dir):
         self.img_dir = img_dir
         self.mask_dir = mask_dir
         self.images = os.listdir(self.img_dir)
         self.masks = os.listdir(self.mask_dir)
-        self.transform = transform
-
-        self.img_transform = img_transform
 
         transform_list = []
         transform_list += [transforms.Grayscale()]
         transform_list += [transforms.ToTensor()]
-        transform_list += [Global_normalize()]
-        #transform_list += [transforms.Lambda(lambda  img: self.__normalize(img))]
-        inp_transforms = transforms.Compose(transform_list)
+        # transform_list += [Global_normalize()]
+        # transform_list += [transforms.Lambda(lambda  img: self.__normalize(img))]
+        self.transform_a = transforms.Compose(transform_list)
 
         self.loaded_imgs = [None] * len(self.images)
         self.loaded_masks = [None] * len(self.masks)
 
-        for img_ind in range(len(self.images)):
-            img_path = os.path.join(
-                self.img_dir, self.images[img_ind]
-            )
-            image = Image.open(img_path)
-            image.load()
-            #self.mean = image.mean()
-            #self.std = image.std()
-            self.loaded_imgs[img_ind] = inp_transforms(image)
+        print (f"number of images: {len(self.images)}")
+        # for img_ind in range(len(self.images)):
+        #     img_path = os.path.join(
+        #         self.img_dir, self.images[img_ind]
+        #     )
+        #     image = Image.open(img_path)
+        #     image.load()
+        #     #self.mean = image.mean()
+        #     #self.std = image.std()
+        #     self.loaded_imgs[img_ind] = inp_transforms(image)
 
-        for mask_ind in range(len(self.masks)):
-            mask_path = os.path.join(
-                self.mask_dir, self.masks[mask_ind]
-            )
-            mask = Image.open(mask_path)
-            mask.load()
-            self.loaded_masks[mask_ind] = transforms.ToTensor()(mask)
+        # for mask_ind in range(len(self.masks)):
+        #     mask_path = os.path.join(
+        #         self.mask_dir, self.masks[mask_ind]
+        #     )
+        #     mask = Image.open(mask_path)
+        #     mask.load()
+        #     self.loaded_masks[mask_ind] = transforms.ToTensor()(mask)
 
     # get the total number of samples
     def __len__(self):
@@ -69,17 +67,17 @@ class CellDataset(Dataset):
         # we'll be using Pillow library for reading files
         # since many torchvision transforms operate on PIL images
         image = self.loaded_imgs[idx%(len(self.images))]
+        print (image.shape)
         mask = self.loaded_masks[idx%(len(self.images))]
-        if self.transform is not None:
-            # Note: using seeds to ensure the same random transform is applied to
-            # the image and mask
-            seed = torch.seed()
-            torch.manual_seed(seed)
-            image = self.transform(image)
-            torch.manual_seed(seed)
-            mask = self.transform(mask)
-        if self.img_transform is not None:
-            image = self.img_transform(image)
+        # Note: using seeds to ensure the same random transform is applied to
+        # the image and mask
+        seed = torch.seed()
+        torch.manual_seed(seed)
+        image = self.transform_a(image)
+        torch.manual_seed(seed)
+        mask = self.transform_a(mask)
+        # if self.img_transform is not None:
+        #     image = self.img_transform(image)
         return image, mask
 
     def __normalize(img):

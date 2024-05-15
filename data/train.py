@@ -43,13 +43,11 @@ def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_wor
     #img_dir = "/localscratch/exceptionals/train_images2D/images"
     #mask_dir = "/localscratch/exceptionals/train_images2D/masks"
     trainData = local.CellDataset(img_dir = img_dir,
-                            mask_dir = mask_dir,
-                            transform = transform,
-                            img_transform = transform
+                            mask_dir = mask_dir
                            )
     
     # Start training
-    train_loader=DataLoader(trainData, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    train_loader= DataLoader(trainData, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     
     # Create network
     unet = UNet(depth=depth, in_channels=in_channels, out_channels=out_channels, num_fmaps=num_fmaps, final_activation="Softmax").to(device)
@@ -58,7 +56,7 @@ def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_wor
     
     # Start training
     for epoch in range(num_epochs):
-        print(epoch)
+        print (f"epoch: {epoch}")
         run_training(unet, train_loader, optimizer, loss, epoch, device=device)
         
     return 
