@@ -54,14 +54,14 @@ class CellDataset(Dataset):
 
     # get the total number of samples
     def __len__(self):
-        return len(self.images)
+        return len(self.images)*10
 
     # fetch the training sample given its index
     def __getitem__(self, idx):
         # we'll be using Pillow library for reading files
         # since many torchvision transforms operate on PIL images
-        image = self.loaded_imgs[idx]
-        mask = self.loaded_masks[idx]
+        image = self.loaded_imgs[idx%(len(self.images))]
+        mask = self.loaded_masks[idx%(len(self.images))]
         if self.transform is not None:
             # Note: using seeds to ensure the same random transform is applied to
             # the image and mask
