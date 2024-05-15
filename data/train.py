@@ -26,11 +26,12 @@ sys.path.append("/localscratch/devel/the_exceptionals/util/")
 from visualize import show_random_dataset_image_with_prediction
 
 sys.path.append("/localscratch/devel/the_exceptionals/data/")
-from local import (
-    CellDataset,
-    show_random_dataset_image,
-    show_one_image
-)
+#from local import (
+#    CellDataset,
+#    show_random_dataset_image,
+#    show_one_image
+#)
+import local
 
 def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_workers=8,
           depth=4, in_channels=1, out_channels=1, num_fmaps=64, transform=None):
@@ -41,7 +42,7 @@ def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_wor
     # Import dataset
     #img_dir = "/localscratch/exceptionals/train_images2D/images"
     #mask_dir = "/localscratch/exceptionals/train_images2D/masks"
-    trainData = CellDataset(img_dir = img_dir,
+    trainData = local.CellDataset(img_dir = img_dir,
                             mask_dir = mask_dir,
                             transform = transform,
                             img_transform = transform

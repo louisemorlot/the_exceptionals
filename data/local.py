@@ -11,6 +11,7 @@ def show_one_image(image_path):
     image = imageio.imread(image_path)
     plt.imshow(image)
 
+    
 class CellDataset(Dataset):
     """A Pytorch dataset to load the images and masks"""
 
@@ -23,13 +24,11 @@ class CellDataset(Dataset):
 
         self.img_transform = img_transform
 
-        inp_transforms = transforms.Compose(
-            [
-                transforms.Grayscale(),
-                transforms.ToTensor(),
-                transforms.Normalize([0.5],[0.5]),
-            ]
-        )
+        transform_list = []
+        transform_list += [transforms.Grayscale()]
+        transform_list += [transforms.ToTensor()]
+        transform_list += [transforms.Lambda(lambda  img: self.__normalize(img))]
+        inp_transforms = transforms.Compose(transform_list)
 
         self.loaded_imgs = [None] * len(self.images)
         self.loaded_masks = [None] * len(self.masks)
@@ -74,6 +73,11 @@ class CellDataset(Dataset):
             image = self.img_transform(image)
         return image, mask
 
+    def __normalize(img):
+        img_norm = img / ((2**16-1)*1.0)
+        assert img_norm.dtype == np.float
+        return img_norm
+    
 def show_random_dataset_image(dataset):
     idx = np.random.randint(0, len(dataset))  # take a random sample
     img, mask = dataset[idx]  # get the image and the nuclei masks
