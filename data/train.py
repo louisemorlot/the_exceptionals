@@ -52,8 +52,8 @@ def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_wor
     train_loader= DataLoader(trainData, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     
     # Create network
-    unet = UNet(depth=depth, in_channels=in_channels, out_channels=out_channels, num_fmaps=num_fmaps, final_activation="Sigmoid").to(device)
-    loss = nn.BCEWithLogitsLoss()
+    unet = UNet(depth=depth, in_channels=in_channels, out_channels=out_channels, num_fmaps=num_fmaps, final_activation=None).to(device)
+    loss = nn.MSELoss()
     optimizer = torch.optim.Adam(unet.parameters(), lr = lr)
     
     # Start training
@@ -76,7 +76,8 @@ def run_training(
     early_stop=False,
 ):
 
-    tb_logger = SummaryWriter("/localscratch/runs/Unet/expSigmoid_BCELogits")
+    exp_name = "expNone_MSE_on_mask"
+    tb_logger = SummaryWriter(f"/localscratch/runs/Unet/{exp_name}")
     
     if device is None:
         # You can pass in a device or we will default to using
@@ -153,3 +154,4 @@ def run_training(
         if early_stop and batch_id > 5:
             print("Stopping test early!")
             break
+    torch.save(model.cpu().state_dict(), f"/localscratch/project/model_saved/{exp_name}_epoch_{epoch}.pth")
