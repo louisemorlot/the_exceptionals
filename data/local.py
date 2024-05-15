@@ -2,76 +2,77 @@ import os
 import numpy as np
 import imageio
 import matplotlib.pyplot as plt
-from PIL import Image
+# from PIL import Image
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
+from torchvision.transforms import functional as F
+
+from skimage import io
+
 
 def show_one_image(image_path):
     image = imageio.imread(image_path)
     plt.imshow(image)
 
+class ImageToTensor:
+    def __call__(self, image):
+        image = image.astype(np.float32)
+        image = np.array(image)
+        img_tensor = torch.from_numpy(image).float()
+        img_tensor = img_tensor / ((2**16-1)*1.0)
+        return img_tensor
+    
+class MaskToTensor:
+    def __call__(self, image):
+        image = image.astype(np.float32)
+        image = np.array(image)
+        img_tensor = torch.from_numpy(image).float()
+        return img_tensor
+    
 class CellDataset(Dataset):
     """A Pytorch dataset to load the images and masks"""
 
-    def __init__(self, img_dir, mask_dir, transform = None, img_transform = None):
+    def __init__(self, img_dir, mask_dir):
         self.img_dir = img_dir
         self.mask_dir = mask_dir
         self.images = os.listdir(self.img_dir)
         self.masks = os.listdir(self.mask_dir)
-        self.transform = transform
 
-        self.img_transform = img_transform
+        transform_img_list = []
+        # transform_img_list += [transforms.Grayscale()]
+        # transform_img_list += [transforms.ToTensor()] # already scales the image to [0,1]
+        transform_img_list += [ImageToTensor()]
 
-        inp_transforms = transforms.Compose(
-            [
-                transforms.Grayscale(),
-                transforms.ToTensor(),
-                transforms.Normalize([0.5],[0.5]),
-            ]
-        )
+        transform_mask_list = []
+        transform_mask_list += [MaskToTensor()]
+        self.img_transform = transforms.Compose(transform_img_list)
+        self.mask_transform = transforms.Compose(transform_mask_list)
 
-        self.loaded_imgs = [None] * len(self.images)
-        self.loaded_masks = [None] * len(self.masks)
-
-        for img_ind in range(len(self.images)):
-            img_path = os.path.join(
-                self.img_dir, self.images[img_ind]
-            )
-            image = Image.open(img_path)
-            image.load()
-            #self.mean = image.mean()
-            #self.std = image.std()
-            self.loaded_imgs[img_ind] = inp_transforms(image)
-
-        for mask_ind in range(len(self.masks)):
-            mask_path = os.path.join(
-                self.mask_dir, self.masks[mask_ind]
-            )
-            mask = Image.open(mask_path)
-            mask.load()
-            self.loaded_masks[mask_ind] = transforms.ToTensor()(mask)
+        print (f"number of images: {len(self.images)}")
 
     # get the total number of samples
     def __len__(self):
-        return len(self.images)
+        return len(self.images)*10
 
     # fetch the training sample given its index
     def __getitem__(self, idx):
         # we'll be using Pillow library for reading files
         # since many torchvision transforms operate on PIL images
-        image = self.loaded_imgs[idx]
-        mask = self.loaded_masks[idx]
-        if self.transform is not None:
-            # Note: using seeds to ensure the same random transform is applied to
-            # the image and mask
-            seed = torch.seed()
-            torch.manual_seed(seed)
-            image = self.transform(image)
-            torch.manual_seed(seed)
-            mask = self.transform(mask)
-        if self.img_transform is not None:
-            image = self.img_transform(image)
+        # image = Image.open(os.path.join(self.img_dir, self.images[idx%(len(self.images))]))
+        # mask = Image.open(os.path.join(self.mask_dir, self.masks[idx%(len(self.masks))]))
+        image = io.imread(os.path.join(self.img_dir, self.images[idx%(len(self.images))]))
+        mask = io.imread(os.path.join(self.mask_dir, self.masks[idx%(len(self.masks))]))
+        print (f"image_shape: {image.shape}")
+        print (f"mask_shape: {mask.shape}")
+
+        # Note: using seeds to ensure the same random transform is applied to
+        # the image and mask
+        seed = torch.seed()
+        torch.manual_seed(seed)
+        image = self.img_transform(image)
+        torch.manual_seed(seed)
+        mask = self.mask_transform(mask)
         return image, mask
 
 def show_random_dataset_image(dataset):
