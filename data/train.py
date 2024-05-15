@@ -42,10 +42,13 @@ def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_wor
     # Import dataset
     #img_dir = "/localscratch/exceptionals/train_images2D/images"
     #mask_dir = "/localscratch/exceptionals/train_images2D/masks"
+    
     trainData = local.CellDataset(img_dir = img_dir,
                             mask_dir = mask_dir
                            )
     
+    #sampled_data = 
+
     # Start training
     train_loader= DataLoader(trainData, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     
@@ -60,6 +63,7 @@ def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_wor
         run_training(unet, train_loader, optimizer, loss, epoch, device=device)
         
     return 
+
 
 def run_training(
     model,
