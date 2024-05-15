@@ -34,7 +34,7 @@ sys.path.append("/localscratch/devel/the_exceptionals/data/")
 import local
 
 def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_workers=8,
-          depth=4, in_channels=1, out_channels=1, num_fmaps=64, transform=None, img_transform=None):
+          depth=4, in_channels=1, out_channels=1, num_fmaps=64, transform=None):
     
     # Set device to gpu or cpu
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
