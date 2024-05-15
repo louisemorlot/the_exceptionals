@@ -10,25 +10,31 @@ from torchvision.transforms import functional as F
 
 from skimage import io
 
+sys.path.append("/localscratch/devel/the_exceptionals/data/")
+import local
+from transformation import sample_crops
 
 def show_one_image(image_path):
     image = imageio.imread(image_path)
     plt.imshow(image)
 
-class ImageToTensor:
+class NumpyToTensor:
+    def __call__(self, ndarray: image):
+        img_tensor = torch.from_numpy(image).float()
+        return img_tensor
+        
+class ImageNormalize:
     def __call__(self, image):
         image = image.astype(np.float32)
         image = np.array(image)
-        img_tensor = torch.from_numpy(image).float()
-        img_tensor = img_tensor / ((2**16-1)*1.0)
-        return img_tensor
+        image = image / ((2**16-1)*1.0)
+        return image        
     
-class MaskToTensor:
-    def __call__(self, image):
-        image = image.astype(np.float32)
-        image = np.array(image)
-        img_tensor = torch.from_numpy(image).float()
-        return img_tensor
+class MaskNormalize:
+    def __call__(self, mask):
+        mask = image.astype(np.float32)
+        mask = np.array(mask)
+        return mask
     
 class CellDataset(Dataset):
     """A Pytorch dataset to load the images and masks"""
@@ -38,14 +44,17 @@ class CellDataset(Dataset):
         self.mask_dir = mask_dir
         self.images = os.listdir(self.img_dir)
         self.masks = os.listdir(self.mask_dir)
-
+        
         transform_img_list = []
         # transform_img_list += [transforms.Grayscale()]
         # transform_img_list += [transforms.ToTensor()] # already scales the image to [0,1]
-        transform_img_list += [ImageToTensor()]
+        transform_img_list += [ImageNormalize()]
+        transform_img_list += [NumpyToTensor()]
 
         transform_mask_list = []
-        transform_mask_list += [MaskToTensor()]
+        transform_mask_list += [MaskNormalize()]
+        transform_mask_list += [NumpyToTensor()]
+        
         self.img_transform = transforms.Compose(transform_img_list)
         self.mask_transform = transforms.Compose(transform_mask_list)
 
@@ -66,6 +75,13 @@ class CellDataset(Dataset):
         print (f"image_shape: {image.shape}")
         print (f"mask_shape: {mask.shape}")
 
+        # Calculate crop coordinates from mask
+        cropCoords = sample_crops(mask)
+
+        # Apply crop to image and mask
+        image = image[cropCoords]
+        mask = mask[cropCoords]
+        
         # Note: using seeds to ensure the same random transform is applied to
         # the image and mask
         seed = torch.seed()
