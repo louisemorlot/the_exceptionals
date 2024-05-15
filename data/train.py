@@ -33,7 +33,7 @@ sys.path.append("/localscratch/devel/the_exceptionals/data/")
 import local
 
 def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_workers=8,
-          depth=4, in_channels=1, out_channels=1, num_fmaps=64, transform=None):
+          depth=4, in_channels=1, out_channels=1, num_fmaps=64, lr = 0.001):
     
     # Set device to gpu or cpu
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -52,9 +52,9 @@ def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_wor
     train_loader= DataLoader(trainData, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     
     # Create network
-    unet = UNet(depth=depth, in_channels=in_channels, out_channels=out_channels, num_fmaps=num_fmaps, final_activation="Softmax").to(device)
-    loss = nn.BCELoss()
-    optimizer = torch.optim.Adam(unet.parameters())
+    unet = UNet(depth=depth, in_channels=in_channels, out_channels=out_channels, num_fmaps=num_fmaps, final_activation="Sigmoid").to(device)
+    loss = nn.BCEWithLogitsLoss()
+    optimizer = torch.optim.Adam(unet.parameters(), lr = lr)
     
     # Start training
     for epoch in range(num_epochs):
@@ -76,7 +76,7 @@ def run_training(
     early_stop=False,
 ):
 
-    tb_logger = SummaryWriter("/localscratch/runs/Unet")
+    tb_logger = SummaryWriter("/localscratch/runs/Unet/expSigmoid_BCELogits")
     
     if device is None:
         # You can pass in a device or we will default to using
@@ -103,8 +103,8 @@ def run_training(
 
         # apply model and calculate loss
         prediction = model(x)
-        if prediction.shape != y.shape:
-            y = crop(y, prediction)
+        #if prediction.shape != y.shape:
+        #    y = crop(y, prediction)
         if y.dtype != prediction.dtype:
             y = y.type(prediction.dtype)
         loss = loss_function(prediction, y)
@@ -134,6 +134,10 @@ def run_training(
             
         # check if we log images in this iteration
         if step % log_image_interval == 0:
+            p = prediction.to("cpu").detach().numpy()
+            np.save(f"/localscratch/runs/Unet/{step}_prediction.npy", p)
+            np.save(f"/localscratch/runs/Unet/{step}_image.npy", x.to("cpu").numpy())
+            np.save(f"/localscratch/runs/Unet/{step}_mask.npy", y.to("cpu").numpy())
             tb_logger.add_images(
                 tag="input", img_tensor=x.to("cpu"), global_step=step
             )
@@ -143,9 +147,9 @@ def run_training(
             tb_logger.add_images(
                 tag="prediction",
                 img_tensor=prediction.to("cpu").detach(),
-                global_step=step,
+                global_step=step
             )
-
+            
         if early_stop and batch_id > 5:
             print("Stopping test early!")
             break

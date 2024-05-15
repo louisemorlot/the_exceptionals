@@ -27,15 +27,24 @@ class ImageNormalize:
         image = image.astype(np.float32)
         image = np.array(image)
         image = image / ((2**16-1)*1.0)
-        image = np.expand_dims(image, axis = 0)
+        #image = np.expand_dims(image, axis = 0)
         return image        
-    
+
+class ImageMinMaxNormalize:
+    def __call__(self, image):
+        image = image.astype(np.float32)
+        image = np.array(image)
+        image = ( image-np.min(image) )/ (np.max(image) - np.min(image) + 1e-6)
+        image = np.expand_dims(image, axis = 0)
+        return image 
+        
 class MaskNormalize:
     def __call__(self, mask):
-        mask = mask.astype(np.float32)
+        #mask = mask.astype(np.float32)
         mask = np.array(mask)
         mask = np.expand_dims(mask, axis = 0)
-        return mask
+        mask_tensor = torch.from_numpy(mask)
+        return mask_tensor
     
 class CellDataset(Dataset):
     """A Pytorch dataset to load the images and masks"""
@@ -50,12 +59,15 @@ class CellDataset(Dataset):
         # transform_img_list += [transforms.Grayscale()]
         # transform_img_list += [transforms.ToTensor()] # already scales the image to [0,1]
         transform_img_list += [ImageNormalize()]
+        transform_img_list += [ImageMinMaxNormalize()]
         transform_img_list += [NumpyToTensor()]
 
         transform_mask_list = []
         transform_mask_list += [MaskNormalize()]
-        transform_mask_list += [NumpyToTensor()]
-        
+        #transform_mask_list += [NumpyToTensor()]
+        self.cropsize = 128
+        self.weights = 1000000
+        self.crop_flag = True
         self.img_transform = transforms.Compose(transform_img_list)
         self.mask_transform = transforms.Compose(transform_mask_list)
 
@@ -72,16 +84,19 @@ class CellDataset(Dataset):
         # image = Image.open(os.path.join(self.img_dir, self.images[idx%(len(self.images))]))
         # mask = Image.open(os.path.join(self.mask_dir, self.masks[idx%(len(self.masks))]))
         image = io.imread(os.path.join(self.img_dir, self.images[idx%(len(self.images))]))
-        mask = io.imread(os.path.join(self.mask_dir, self.masks[idx%(len(self.masks))]))
+        mask = io.imread(os.path.join(self.mask_dir, self.images[idx%(len(self.images))]))
         #print (f"image_shape: {image.shape}")
         #print (f"mask_shape: {mask.shape}")
 
         # Calculate crop coordinates from mask
-        cropCoords = sample_crops(mask)
+        if self.crop_flag:
+            cropCoords = sample_crops(mask, label_weight=self.weights, patch_size = [self.cropsize, self.cropsize])
 
-        # Apply crop to image and mask
-        image = image[cropCoords[0]:cropCoords[1],cropCoords[2]:cropCoords[3]]
-        mask = mask[cropCoords[0]:cropCoords[1],cropCoords[2]:cropCoords[3]]
+            # Apply crop to image and mask
+            image = image[cropCoords[0]:cropCoords[1],cropCoords[2]:cropCoords[3]]
+            mask = mask[cropCoords[0]:cropCoords[1],cropCoords[2]:cropCoords[3]]
+            mask[mask>0]=1
+            mask = np.int8(mask)
         
         # Note: using seeds to ensure the same random transform is applied to
         # the image and mask
