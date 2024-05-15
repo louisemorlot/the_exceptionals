@@ -11,7 +11,15 @@ def show_one_image(image_path):
     image = imageio.imread(image_path)
     plt.imshow(image)
 
-    
+class Global_normalize(torch.nn.Module):
+
+    def __init__():
+        super().__init__()
+
+    def forward(self, img):
+        img_normd = img / ((2**16-1)*1.0)
+        return img_normd 
+
 class CellDataset(Dataset):
     """A Pytorch dataset to load the images and masks"""
 
@@ -27,7 +35,8 @@ class CellDataset(Dataset):
         transform_list = []
         transform_list += [transforms.Grayscale()]
         transform_list += [transforms.ToTensor()]
-        transform_list += [transforms.Lambda(lambda  img: self.__normalize(img))]
+        transform_list += [Global_normalize()]
+        #transform_list += [transforms.Lambda(lambda  img: self.__normalize(img))]
         inp_transforms = transforms.Compose(transform_list)
 
         self.loaded_imgs = [None] * len(self.images)
