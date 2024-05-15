@@ -33,7 +33,7 @@ from local import (
 )
 
 def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_workers=8,
-          depth=4, in_channels=1, out_channels=1, num_fmaps=64, transform=None):
+          depth=4, in_channels=1, out_channels=1, num_fmaps=64, transform=None, img_transform=None):
     
     # Set device to gpu or cpu
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -44,9 +44,11 @@ def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_wor
     trainData = CellDataset(img_dir = img_dir,
                             mask_dir = mask_dir,
                             transform = transform,
-                            img_transform = transform
+                            img_transform = img_transform
                            )
     
+    #sampled_data = 
+
     # Start training
     train_loader=DataLoader(trainData, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     
@@ -61,6 +63,7 @@ def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_wor
         run_training(unet, train_loader, optimizer, loss, epoch, device=device)
         
     return 
+
 
 def run_training(
     model,
