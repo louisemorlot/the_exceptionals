@@ -34,14 +34,14 @@ def sampling_pdf(y, pdf, height, width):
         indexw = indexw + np.int16(np.floor(width // 2))
         indexh = indexh + np.int16(np.floor(height // 2))
 
-    return indexh, indexw
+    return indexh, indexw, pdf_im
 
     
 def sample_crops(mask, label_weight=3000, patch_size = [256, 256]):
     # Sample training images to match the desired distribution from to min and max of the source distribution
 
     # Random draw, check target distribution 
-    indexh, indexw = sampling_pdf(mask, label_weight, patch_size[0], patch_size[1])
+    indexh, indexw, _ = sampling_pdf(mask, label_weight, patch_size[0], patch_size[1])
     lr = indexh - np.floor(patch_size[0] // 2)
     lr = lr.astype(np.int16)
     ur = indexh + np.round(patch_size[0] // 2)

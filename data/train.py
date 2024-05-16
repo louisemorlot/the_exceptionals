@@ -31,13 +31,13 @@ sys.path.append("/localscratch/devel/the_exceptionals/data/")
 #    show_one_image
 #)
 import local
+from transformation import sampling_pdf
 
 def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_workers=8,
           depth=4, in_channels=1, out_channels=1, num_fmaps=64, lr = 0.001):
     
     # Set device to gpu or cpu
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    
     # Import dataset
     #img_dir = "/localscratch/exceptionals/train_images2D/images"
     #mask_dir = "/localscratch/exceptionals/train_images2D/masks"
@@ -50,7 +50,7 @@ def train(img_dir, mask_dir, num_epochs=100, batch_size=5, shuffle=True, num_wor
 
     # Start training
     train_loader= DataLoader(trainData, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
-    
+
     # Create network
     unet = UNet(depth=depth, in_channels=in_channels, out_channels=out_channels, num_fmaps=num_fmaps, final_activation=None).to(device)
     loss = nn.MSELoss()
@@ -76,7 +76,7 @@ def run_training(
     early_stop=False,
 ):
 
-    exp_name = "expNone_MSE_256"
+    exp_name = "expNone_MSE_weigthed"
     tb_logger = SummaryWriter(f"/localscratch/runs/Unet/{exp_name}")
     
     if device is None:
@@ -98,6 +98,8 @@ def run_training(
     for batch_id, (x, y) in enumerate(loader):
         # move input and target to the active device (either cpu or gpu)
         x, y = x.to(device), y.to(device)
+        pdf = 1
+        _, _, pdf_im = sampling_pdf(y, pdf = pdf, height = y.shape[0], width=y.shape[1])
 
         # zero the gradients for this iteration
         optimizer.zero_grad()
@@ -108,7 +110,7 @@ def run_training(
         #    y = crop(y, prediction)
         if y.dtype != prediction.dtype:
             y = y.type(prediction.dtype)
-        loss = loss_function(prediction, y)
+        loss = loss_function(prediction, y) / pdf_im
 
         # backpropagate the loss and adjust the parameters
         loss.backward()
