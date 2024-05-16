@@ -98,8 +98,8 @@ def run_training(
     for batch_id, (x, y) in enumerate(loader):
         # move input and target to the active device (either cpu or gpu)
         x, y = x.to(device), y.to(device)
-        pdf = 1
-        _, _, pdf_im = sampling_pdf(y, pdf = pdf, height = y.shape[0], width=y.shape[1])
+        #pdf = 1
+        #_, _, pdf_im = sampling_pdf(y, pdf = pdf, height = y.shape[0], width=y.shape[1])
 
         # zero the gradients for this iteration
         optimizer.zero_grad()
@@ -110,7 +110,7 @@ def run_training(
         #    y = crop(y, prediction)
         if y.dtype != prediction.dtype:
             y = y.type(prediction.dtype)
-        loss = loss_function(prediction, y) / pdf_im
+        loss = loss_function(prediction, y)
 
         # backpropagate the loss and adjust the parameters
         loss.backward()

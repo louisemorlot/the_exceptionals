@@ -126,24 +126,25 @@ def show_random_dataset_image(dataset):
 class TestDataset(Dataset):
     """A Pytorch dataset to load the images and masks"""
 # we assume that both mask and image are gonna fit into memory
-    def __init__(self, img_path, mask_path):
+    def __init__(self, img_path, mask_path, slide=216, cropsize=256):
         #self.img_dir = img_dir
         #self.mask_dir = mask_dir
         image = io.imread(img_path)
         mask = io.imread(mask_path)
 
-        rfs = compute_receptive_field(depth = 3, kernel_size = 3, downsample_factor = 2)
-        slide = int(rfs // 2)
-        self.cropsize = 256
+        #rfs = compute_receptive_field(depth = 3, kernel_size = 3, downsample_factor = 2)
+        #slide = int(rfs // 2)
+        self.cropsize = cropsize
+        self.slide = slide
         
         image = image / ((2**16-1)*1.0)
-        img_tensor = torch.from_numpy(image)
+        img_tensor = torch.from_numpy(image.astype(np.float32))
         img_crops = img_tensor.unfold(0, self.cropsize, slide).unfold(1, self.cropsize, slide)
         self.nrows, self.ncols, _, _ = img_crops.shape
         self.batch_crops = img_crops.permute(0, 2, 1, 3).reshape(-1, self.cropsize, self.cropsize)
         self.batch_crops.unsqueeze(dim = 1)
 
-        mask_tensor = torch.from_numpy(mask) # dim H, W
+        mask_tensor = torch.from_numpy(mask.astype(np.uint8)) # dim H, W
         mask_crops = mask_tensor.unfold(0, self.cropsize, slide).unfold(1, self.cropsize, slide)
         #self.nrows, self.ncols, _, _ = mask_crops.shape
         self.batch_mask = mask_crops.permute(0, 2, 1, 3).reshape(-1, self.cropsize, self.cropsize)
@@ -162,8 +163,9 @@ class TestDataset(Dataset):
         mask = self.batch_mask[idx]
         
         #normalize to min max at the patch 
-        image = ( image-np.min(image) )/ (np.max(image) - np.min(image) + 1e-6)
+        image = ( image- image.min()) / (image.max() - image.min() + 1e-6)
         image = image.unsqueeze(dim = 0)
+        mask = F.center_crop(mask, self.slide)
         mask = mask.unsqueeze(dim = 0)
 
         # Note: using seeds to ensure the same random transform is applied to

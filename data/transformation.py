@@ -34,7 +34,7 @@ def sampling_pdf(y, pdf, height, width):
         indexw = indexw + np.int16(np.floor(width // 2))
         indexh = indexh + np.int16(np.floor(height // 2))
 
-    return indexh, indexw, pdf_im
+    return indexh, indexw
 
     
 def sample_crops(mask, label_weight=3000, patch_size = [256, 256]):

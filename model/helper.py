@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 import torch
 from torch.utils.data import Dataset
-from torchvision import transforms
+from torchvision.transforms import functional as F
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from skimage.segmentation import relabel_sequential
@@ -251,6 +251,10 @@ def evaluate(gt_labels: np.ndarray, pred_labels: np.ndarray, th: float = 0.5):
 def validate(
     model, 
     loader, 
+    #rfs,
+    ncols,
+    nrows,
+    cropsize,
     loss_function, 
     metric,
     step = None, 
@@ -272,7 +276,7 @@ def validate(
     # set validation loss and metrix
     val_loss = 0
     val_metric = 0
-
+    predictions = []
     with torch.no_grad():
         for x, y in loader:
             x, y = x.to(device), y.to(device)
@@ -285,23 +289,33 @@ def validate(
             val_loss += loss_function(pred, y).item()
             val_metric += metric(pred > 0.5, y).item()
 
+            #pred = F.center_crop(img = pred, output_size = rfs)
+            predictions.append(pred)
+
+        # Stitch crops back together
+        predictions = torch.cat(predictions, dim = 0).cpu().numpy()
+        slide = predictions.shape[-1]
+        stitched = predictions.reshape(ncols * slide, nrows * slide)
+
     val_loss = val_loss / len(loader)
     val_metric = val_metric / len(loader)
 
-    if tb_logger is not None:
-        assert(
-            step is not None
-        ), "Need to know the current step to show validation results"
+    return stitched, val_loss, val_metric
 
-        tb_logger.add_scalar(tag = "val_loss", scalar_value = val_loss, global_step=step)
-        tb_logger.add_scalar(tag = "val_metric", scalar_value = val_metric, global_step = step)
+    # if tb_logger is not None:
+    #     assert(
+    #         step is not None
+    #     ), "Need to know the current step to show validation results"
 
-        tb_logger.add_images(tag = "val input image", img_tensor = x.to("cpu"), global_step = step)
-        tb_logger.add_images(tag = "val target image", img_tensor = y.to("cpu"), global_step = step)
-        tb_logger.add_images(tag = "val prediction", img_tensor = pred.to("cpu"), global_step = step)
+    #     tb_logger.add_scalar(tag = "val_loss", scalar_value = val_loss, global_step=step)
+    #     tb_logger.add_scalar(tag = "val_metric", scalar_value = val_metric, global_step = step)
 
-    print(
-        "\nValidate: Average loss: {:.4f}, Average Metric: {:.4f}\n".format(
-            val_loss, val_metric
-        )
-    )
+    #     tb_logger.add_images(tag = "val input image", img_tensor = x.to("cpu"), global_step = step)
+    #     tb_logger.add_images(tag = "val target image", img_tensor = y.to("cpu"), global_step = step)
+    #     tb_logger.add_images(tag = "val prediction", img_tensor = pred.to("cpu"), global_step = step)
+
+    # print(
+    #     "\nValidate: Average loss: {:.4f}, Average Metric: {:.4f}\n".format(
+    #         val_loss, val_metric
+    #     )
+    # )
