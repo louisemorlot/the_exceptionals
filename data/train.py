@@ -76,7 +76,7 @@ def run_training(
     early_stop=False,
 ):
 
-    exp_name = "expNone_MSE_on_mask"
+    exp_name = "expNone_MSE_256"
     tb_logger = SummaryWriter(f"/localscratch/runs/Unet/{exp_name}")
     
     if device is None:
@@ -136,9 +136,9 @@ def run_training(
         # check if we log images in this iteration
         if step % log_image_interval == 0:
             p = prediction.to("cpu").detach().numpy()
-            np.save(f"/localscratch/runs/Unet/{step}_prediction.npy", p)
-            np.save(f"/localscratch/runs/Unet/{step}_image.npy", x.to("cpu").numpy())
-            np.save(f"/localscratch/runs/Unet/{step}_mask.npy", y.to("cpu").numpy())
+            #np.save(f"/localscratch/runs/Unet/{step}_prediction.npy", p)
+            #np.save(f"/localscratch/runs/Unet/{step}_image.npy", x.to("cpu").numpy())
+            #np.save(f"/localscratch/runs/Unet/{step}_mask.npy", y.to("cpu").numpy())
             tb_logger.add_images(
                 tag="input", img_tensor=x.to("cpu"), global_step=step
             )

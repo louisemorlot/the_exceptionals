@@ -12,6 +12,10 @@ from skimage import io
 import sys
 sys.path.append("/localscratch/project/the_exceptionals/data/")
 from transformation import sample_crops
+sys.path.append("/localscratch/project/the_exceptionals/model/")
+from helper import compute_receptive_field
+
+from PIL import Image
 
 def show_one_image(image_path):
     image = imageio.imread(image_path)
@@ -65,7 +69,7 @@ class CellDataset(Dataset):
         transform_mask_list = []
         transform_mask_list += [MaskNormalize()]
         #transform_mask_list += [NumpyToTensor()]
-        self.cropsize = 128
+        self.cropsize = 256
         self.weights = 1000000
         self.crop_flag = True
         self.img_transform = transforms.Compose(transform_img_list)
@@ -118,3 +122,68 @@ def show_random_dataset_image(dataset):
     _ = [ax.axis("off") for ax in axarr]  # remove the axes
     print("Image size is %s" % {img[0].shape})
     plt.show()
+
+class TestDataset(Dataset):
+    """A Pytorch dataset to load the images and masks"""
+
+    def __init__(self, img_dir, mask_dir):
+        self.img_dir = img_dir
+        self.mask_dir = mask_dir
+        self.images = os.listdir(self.img_dir)
+        self.masks = os.listdir(self.mask_dir)
+        image = io.imread(os.path.join(self.img_dir, self.images[0]))
+        mask = io.imread(os.path.join(self.mask_dir, self.images[0]))
+
+        rfs = compute_receptive_field(depth = 3, kernel_size = 3, downsample_factor = 2)
+        slide = int(rfs // 2)
+        self.cropsize = 256
+        
+        image = image / ((2**16-1)*1.0)
+        image = ( image-np.min(image) )/ (np.max(image) - np.min(image) + 1e-6)
+        img_tensor = torch.from_numpy(image)
+        img_crops = img_tensor.unfold(0, self.cropsize, slide).unfold(1, self.cropsize, slide)
+        img_crops.unsqueeze(dim = 0)
+
+        mask_tensor = torch.from_numpy(mask) # dim H, W
+        mask_crops = mask_tensor.unfold(0, self.cropsize, slide).unfold(1, self.cropsize, slide)
+        mask_crops.unsqueeze(dim = 0) # dim C, H, W
+    
+
+    # get the total number of samples
+    def __len__(self):
+        return len(self.images)*10
+
+    # fetch the training sample given its index
+    def __getitem__(self, idx):
+        # we'll be using Pillow library for reading files
+        # since many torchvision transforms operate on PIL images
+        # image = Image.open(os.path.join(self.img_dir, self.images[idx%(len(self.images))]))
+        # mask = Image.open(os.path.join(self.mask_dir, self.masks[idx%(len(self.masks))]))
+        
+        #print (f"image_shape: {image.shape}")
+        #print (f"mask_shape: {mask.shape}")
+
+        # Calculate receptive field size
+        
+
+        # Pad image with 0
+        #img_pad = image.crop_pad((img_pad.shape[0], img_pad.shape[1]))
+        #img_pad = torch.from_numpy(img_pad)
+
+        # Crop full image into cropsized patches
+        slide = int(rfs // 2)
+        #slide = slide.to(torch.int)
+        #img_crops = image.unfold(0, self.cropsize, slide).unfold(1, self.cropsize, slide)
+        #img_crops = torch.flatten(img_crops, start_dim = 0, end_dim = 1)
+
+       
+        # Note: using seeds to ensure the same random transform is applied to
+        # the image and mask
+        seed = torch.seed()
+        torch.manual_seed(seed)
+        image = self.img_transform(image)
+        img_crops = image.unfold(0, self.cropsize, slide).unfold(1, self.cropsize, slide)
+        img_crops = torch.flatten(img_crops, start_dim = 0, end_dim = 1)
+        torch.manual_seed(seed)
+        mask = self.mask_transform(mask)
+        return img_crops, mask
